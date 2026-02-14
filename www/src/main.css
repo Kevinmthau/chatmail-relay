@@ -84,3 +84,60 @@ code {
     color: white !important;
     font-weight: bold;
 }
+
+.admin-card {
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  padding: 18px;
+  background: #f8fbfd;
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.9em;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  color: #1e2b35;
+  font-weight: 600;
+}
+
+.admin-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #b8c8d4;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.95em;
+}
+
+.admin-input:focus {
+  border-color: #327ca8;
+  outline: none;
+}
+
+.admin-button {
+  margin-top: 14px;
+  border: 1px solid #2f6b8c;
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: #327ca8;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-button:hover {
+  background: #2a6a90;
+}
+
+.admin-result {
+  margin-top: 16px;
+  min-height: 80px;
+  border-radius: 6px;
+  padding: 10px;
+  white-space: pre-wrap;
+  background: #0e1a23;
+  color: #d9ebf6;
+  font-size: 0.9em;
+  overflow-x: auto;
+}

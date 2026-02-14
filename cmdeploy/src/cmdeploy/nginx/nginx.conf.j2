@@ -109,6 +109,22 @@ http {
 		}
 
 		{% if admin_create_enabled %}
+		location = /admin {
+			auth_basic "chatmail admin";
+			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;
+			try_files /admin.html =404;
+		}
+
+		location = /admin/ {
+			return 301 /admin;
+		}
+
+		location = /admin.html {
+			auth_basic "chatmail admin";
+			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;
+			try_files /admin.html =404;
+		}
+
 		location /admin/create {
 			auth_basic "chatmail admin";
 			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;

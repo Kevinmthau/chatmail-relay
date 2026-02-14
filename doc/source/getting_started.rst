@@ -171,6 +171,7 @@ Run the command on your deployment VM (not on your local build machine).
 Public/self-serve address creation is denied while this file is present.
 If you configured the authenticated ``/admin/create`` endpoint, it still
 allows manual account creation.
+You can also use the password-protected web UI at ``https://<domain>/admin``.
 
 
 Migrating to a new build machine
