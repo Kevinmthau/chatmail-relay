@@ -32,7 +32,7 @@ def create_admin_account(config: Config, email: str, password: str):
     if user.get_userdb_dict():
         return 409, {"error": "account already exists"}
 
-    if not is_allowed_to_create(config, email, password):
+    if not is_allowed_to_create(config, email, password, ignore_nocreate=True):
         return 400, {"error": "account creation policy check failed"}
 
     user.set_password(encrypt_password(password))

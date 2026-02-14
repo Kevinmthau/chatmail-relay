@@ -21,9 +21,11 @@ def encrypt_password(password: str):
     return "{SHA512-CRYPT}" + passhash
 
 
-def is_allowed_to_create(config: Config, user, cleartext_password) -> bool:
+def is_allowed_to_create(
+    config: Config, user, cleartext_password, ignore_nocreate: bool = False
+) -> bool:
     """Return True if user and password are admissable."""
-    if os.path.exists(NOCREATE_FILE):
+    if not ignore_nocreate and os.path.exists(NOCREATE_FILE):
         logging.warning(f"blocked account creation because {NOCREATE_FILE!r} exists.")
         return False
 

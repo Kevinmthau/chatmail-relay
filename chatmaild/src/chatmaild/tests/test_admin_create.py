@@ -1,3 +1,4 @@
+import chatmaild.doveauth
 from chatmaild.admin_create import create_admin_account
 
 
@@ -31,3 +32,15 @@ def test_create_admin_account_rejects_short_password(example_config):
     )
     assert status_code == 400
     assert payload["error"] == "account creation policy check failed"
+
+
+def test_create_admin_account_ignores_nocreate(monkeypatch, tmp_path, example_config):
+    no_create = tmp_path.joinpath("nocreate")
+    no_create.write_text("")
+    monkeypatch.setattr(chatmaild.doveauth, "NOCREATE_FILE", str(no_create))
+
+    status_code, payload = create_admin_account(
+        example_config, "abcd12345@chat.example.org", "qwertyui9"
+    )
+    assert status_code == 201
+    assert payload["status"] == "created"

@@ -166,7 +166,11 @@ creating addresses, login with ssh to the deployment machine and run:
 
        touch /etc/chatmail-nocreate
 
-Chatmail address creation will be denied while this file is present.
+Run the command on your deployment VM (not on your local build machine).
+
+Public/self-serve address creation is denied while this file is present.
+If you configured the authenticated ``/admin/create`` endpoint, it still
+allows manual account creation.
 
 
 Migrating to a new build machine
