@@ -69,6 +69,15 @@ disable_ipv6 = False
 # Your email adress, which will be used in acmetool to manage Let's Encrypt SSL certificates
 acme_email = 
 
+# Optional admin endpoint for manual account creation.
+# If both values are set, cmdeploy enables:
+#   POST https://<domain>/admin/create
+# with HTTP Basic auth and JSON body: {{"email":"...", "password":"..."}}
+# Password hash format should be suitable for nginx auth_basic
+# (for example: `openssl passwd -6 'YourAdminPassword'`).
+# admin_create_user =
+# admin_create_password_hash =
+
 # Defaults to https://iroh.{{mail_domain}} and running `iroh-relay` on the chatmail
 # service.
 # If you set it to anything else, the service will be disabled

@@ -1,3 +1,5 @@
+import io
+
 from chatmaild.config import Config
 from pyinfra.operations import apt, files, systemd
 
@@ -63,6 +65,9 @@ class NginxDeployer(Deployer):
 def _configure_nginx(config: Config, debug: bool = False) -> bool:
     """Configures nginx HTTP server."""
     need_restart = False
+    admin_create_enabled = bool(
+        config.admin_create_user and config.admin_create_password_hash
+    )
 
     main_config = files.template(
         src=get_resource("nginx/nginx.conf.j2"),
@@ -71,6 +76,7 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         group="root",
         mode="644",
         config={"domain_name": config.mail_domain},
+        admin_create_enabled=admin_create_enabled,
         disable_ipv6=config.disable_ipv6,
     )
     need_restart |= main_config.changed
@@ -113,5 +119,35 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         group="root",
         mode="755",
     )
+
+    files.put(
+        name="Upload cgi admin-create.py script",
+        src=get_resource("admin_create.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-create.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
+    if admin_create_enabled:
+        htpasswd_content = (
+            f"{config.admin_create_user}:{config.admin_create_password_hash}\n".encode()
+        )
+        admin_auth = files.put(
+            name="Upload nginx admin auth file",
+            src=io.BytesIO(htpasswd_content),
+            dest="/etc/nginx/chatmail-admin.htpasswd",
+            user="root",
+            group="www-data",
+            mode="640",
+        )
+        need_restart |= admin_auth.changed
+    else:
+        admin_auth_removed = files.file(
+            name="Remove nginx admin auth file when admin endpoint is disabled",
+            path="/etc/nginx/chatmail-admin.htpasswd",
+            present=False,
+        )
+        need_restart |= admin_auth_removed.changed
 
     return need_restart

@@ -7,6 +7,8 @@ def test_read_config_basic(example_config):
     assert example_config.mail_domain == "chat.example.org"
     assert not example_config.privacy_supervisor and not example_config.privacy_mail
     assert not example_config.privacy_pdo and not example_config.privacy_postal
+    assert not example_config.admin_create_user
+    assert not example_config.admin_create_password_hash
 
     inipath = example_config._inipath
     inipath.write_text(inipath.read_text().replace("60", "37"))
@@ -21,6 +23,18 @@ def test_read_config_basic_using_defaults(tmp_path, maildomain):
     example_config = read_config(inipath)
     assert example_config.max_user_send_per_minute == 60
     assert example_config.filtermail_smtp_port_incoming == 10081
+
+
+def test_read_config_admin_create(make_config):
+    config = make_config(
+        "chat.example.org",
+        {
+            "admin_create_user": "relayadmin",
+            "admin_create_password_hash": "$6$abc$def",
+        },
+    )
+    assert config.admin_create_user == "relayadmin"
+    assert config.admin_create_password_hash == "$6$abc$def"
 
 
 def test_read_config_testrun(make_config):
