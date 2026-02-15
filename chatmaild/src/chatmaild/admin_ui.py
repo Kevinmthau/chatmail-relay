@@ -12,6 +12,8 @@ CONFIG_PATH = "/usr/local/lib/chatmaild/chatmail.ini"
 def main() -> None:
     config = read_config(CONFIG_PATH)
     domain = html.escape(config.mail_domain)
+    uname_min = int(config.username_min_length)
+    uname_max = int(config.username_max_length)
     pw_min = int(config.password_min_length)
 
     print("Content-Type: text/html; charset=utf-8")
@@ -97,7 +99,10 @@ def main() -> None:
 
     <div class="card">
       <label for="email">Email</label>
-      <input id="email" type="email" placeholder="abcd12345@{domain}" autocomplete="off" />
+      <input id="email" type="email" placeholder="kevin@{domain}" autocomplete="off" />
+      <p class="hint" style="margin: 8px 0 0 0;">
+        Local part length: {uname_min} to {uname_max} characters.
+      </p>
 
       <label for="password">Account password (min length: {pw_min})</label>
       <input id="password" type="text" minlength="{pw_min}" placeholder="StrongPass123!" autocomplete="off" />
@@ -110,6 +115,10 @@ def main() -> None:
       (() => {{
         const createButton = document.getElementById("create-account");
         const result = document.getElementById("result");
+        const mailDomain = {config.mail_domain!r};
+        const unameMin = {uname_min};
+        const unameMax = {uname_max};
+        const pwMin = {pw_min};
 
         async function createAccount() {{
           const email = (document.getElementById("email").value || "").trim();
@@ -117,6 +126,22 @@ def main() -> None:
 
           if (!email || !password) {{
             result.textContent = "Email and account password are required.";
+            return;
+          }}
+
+          if (!email.endsWith("@" + mailDomain)) {{
+            result.textContent = `Email must end with @${{mailDomain}}.`;
+            return;
+          }}
+
+          const localpart = email.split("@")[0] || "";
+          if (localpart.length < unameMin || localpart.length > unameMax) {{
+            result.textContent = `Username (before @) must be between ${{unameMin}} and ${{unameMax}} characters.`;
+            return;
+          }}
+
+          if (password.length < pwMin) {{
+            result.textContent = `Password must be at least ${{pwMin}} characters.`;
             return;
           }}
 
