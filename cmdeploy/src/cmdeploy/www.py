@@ -104,6 +104,9 @@ def _build_webpages(src_dir, build_dir, config):
             render_vars["password_min_length"] = int_to_english(
                 config.password_min_length
             )
+            render_vars["public_create_enabled"] = bool(
+                getattr(config, "public_create_enabled", True)
+            )
             target = build_dir.joinpath(path.stem + ".html")
 
             # recursive jinja2 rendering

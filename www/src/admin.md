@@ -2,6 +2,8 @@
 
 This page creates accounts through the protected `POST /admin/create` API.
 
+<p><a href="/admin">View existing accounts</a></p>
+
 <div class="admin-card">
   <label class="admin-label" for="email">Email</label>
   <input class="admin-input" id="email" type="email" placeholder="abcd12345@{{ config.mail_domain }}" autocomplete="off" />

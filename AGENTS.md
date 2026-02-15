@@ -13,6 +13,16 @@
 - 2026-02-15: Set default username length limits to **2..9** (was 3..32) by updating `chatmaild/src/chatmaild/ini/chatmail.ini.f` and adjusting related tests.
 - 2026-02-15: `cmdeploy` now enforces `username_min_length=2` and `username_max_length=9` in `chatmail.ini` automatically when running commands that load config.
 - 2026-02-15: Updated live VM `chatmail.fun` config `/usr/local/lib/chatmaild/chatmail.ini` from `username_min_length=9` to `2` (kept `username_max_length=9`) and restarted `doveauth`.
+- 2026-02-15: Added admin accounts listing page at `GET /admin/accounts` plus a vmail-run helper (`chatmail-admin-accounts-helper`) and matching sudoers rule deployed by `cmdeploy` for listing existing accounts.
+- 2026-02-15: Made `GET /admin` show the accounts list with a "Create new" button; `GET /admin/accounts` now redirects to `/admin`.
+- 2026-02-15: Fixed macOS deploy compatibility: made `cmdeploy` a regular package by adding `cmdeploy/src/cmdeploy/__init__.py` (so `importlib.resources` works), and removed rsync `--chown` usage from website deploy (now does a remote `chown -R www-data:www-data /var/www/html` after upload).
+- 2026-02-15: Updated `chatmaild` dependency marker so `crypt-r` is only required on Linux (`sys_platform == 'linux'`) to avoid build failures on macOS.
+- 2026-02-15: Authorized a new deploy SSH key for `root@chatmail.fun` (added to `/root/.ssh/authorized_keys`) and restored the `/admin` endpoints by setting `admin_create_user` / `admin_create_password_hash` in the deployed `/usr/local/lib/chatmaild/chatmail.ini` and redeploying nginx.
+- 2026-02-15: Fixed nginx redirects behind the 443 ALPN stream proxy by setting `port_in_redirect off;` in `cmdeploy/src/cmdeploy/nginx/nginx.conf.j2` (prevents broken `:8443` redirects for `/admin/` and similar paths).
+- 2026-02-15: Disabled public/self-serve account creation by default (`public_create_enabled=false` in `chatmaild/src/chatmaild/ini/chatmail.ini.f`), enforced it in `chatmaild.doveauth.is_allowed_to_create()`, and made nginx return 404 for `/new` when disabled (via `cmdeploy/src/cmdeploy/nginx/nginx.conf.j2`).
+- 2026-02-15: `cmdeploy` now enforces `public_create_enabled=false` in `chatmail.ini` automatically when running commands that load config (matching "admin-only creation" policy).
+- 2026-02-15: Added admin account deletion endpoint `POST /admin/delete` and wired it into the admin accounts UI (`GET /admin`) with per-account Delete buttons; deployed via `cmdeploy` with a new vmail-run helper (`chatmail-admin-delete-helper`) and sudoers rule.
+- 2026-02-15: Deployed admin-only account creation policy to live VM `chatmail.fun`: `/new` now returns 404, `public_create_enabled=false` is enforced in `/usr/local/lib/chatmaild/chatmail.ini`, and nginx now supports `POST /admin/delete` (with matching CGI + sudoers).
 
 ## Keeping This File Updated
 - When making a critical change (security, account creation/auth, deploy behavior, config defaults, data migrations), add a dated entry to **Critical Updates** in the same PR/commit.

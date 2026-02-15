@@ -9,6 +9,7 @@ def test_read_config_basic(example_config):
     assert not example_config.privacy_pdo and not example_config.privacy_postal
     assert not example_config.admin_create_user
     assert not example_config.admin_create_password_hash
+    assert example_config.public_create_enabled is False
 
     inipath = example_config._inipath
     inipath.write_text(inipath.read_text().replace("60", "37"))
@@ -23,6 +24,7 @@ def test_read_config_basic_using_defaults(tmp_path, maildomain):
     example_config = read_config(inipath)
     assert example_config.max_user_send_per_minute == 60
     assert example_config.filtermail_smtp_port_incoming == 10081
+    assert example_config.public_create_enabled is False
 
 
 def test_read_config_admin_create(make_config):

@@ -25,6 +25,10 @@ def is_allowed_to_create(
     config: Config, user, cleartext_password, ignore_nocreate: bool = False
 ) -> bool:
     """Return True if user and password are admissable."""
+    if not ignore_nocreate and not getattr(config, "public_create_enabled", True):
+        logging.warning("blocked account creation because public_create_enabled is false.")
+        return False
+
     if not ignore_nocreate and os.path.exists(NOCREATE_FILE):
         logging.warning(f"blocked account creation because {NOCREATE_FILE!r} exists.")
         return False

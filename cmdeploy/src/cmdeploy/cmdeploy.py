@@ -390,7 +390,7 @@ def get_sshexec(ssh_host: str, verbose=True):
 
 
 def _enforce_username_length_policy(inipath: Path) -> None:
-    """Ensure chatmail.ini contains the repo's username length policy.
+    """Ensure chatmail.ini contains the repo's account creation policy.
 
     This keeps local config and deployed server behavior aligned without
     requiring manual edits.
@@ -399,6 +399,8 @@ def _enforce_username_length_policy(inipath: Path) -> None:
     desired = {
         "username_min_length": "2",
         "username_max_length": "9",
+        # Disallow self-serve account creation (no auto-create on first auth).
+        "public_create_enabled": "false",
     }
 
     raw = inipath.read_bytes()

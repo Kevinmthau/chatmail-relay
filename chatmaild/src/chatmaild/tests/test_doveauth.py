@@ -16,6 +16,7 @@ from chatmaild.newemail import create_newemail_dict
 
 @pytest.fixture
 def dictproxy(example_config):
+    example_config.public_create_enabled = True
     return AuthDictProxy(config=example_config)
 
 
@@ -41,6 +42,7 @@ def test_iterate_addresses(dictproxy):
 
 def test_invalid_username_length(example_config):
     config = example_config
+    config.public_create_enabled = True
     config.username_min_length = 6
     config.username_max_length = 10
     password = create_newemail_dict(config)["password"]
@@ -70,6 +72,16 @@ def test_nocreate_file(monkeypatch, tmpdir, dictproxy):
     monkeypatch.setattr(chatmaild.doveauth, "NOCREATE_FILE", str(p))
     dictproxy.lookup_passdb("newuser12@chat.example.org", "zequ0Aimuchoodaechik")
     assert not dictproxy.lookup_userdb("newuser12@chat.example.org")
+
+
+def test_public_create_disabled(example_config):
+    example_config.public_create_enabled = False
+    password = create_newemail_dict(example_config)["password"]
+    assert not is_allowed_to_create(
+        example_config,
+        f"abc12345@{example_config.mail_domain}",
+        password,
+    )
 
 
 def test_handle_dovecot_request(dictproxy):

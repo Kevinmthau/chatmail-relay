@@ -12,7 +12,7 @@ dependencies = [
   "deltachat-rpc-client",
   "filelock",
   "requests",
-  "crypt-r >= 3.13.1 ; python_version >= '3.11'",
+  "crypt-r >= 3.13.1 ; python_version >= '3.11' and sys_platform == 'linux'",
 ]
 
 [tool.setuptools]
@@ -24,6 +24,8 @@ where = ['src']
 [project.scripts]
 doveauth = "chatmaild.doveauth:main"
 chatmail-admin-create-helper = "chatmaild.admin_create_helper:main"
+chatmail-admin-accounts-helper = "chatmaild.admin_accounts_helper:main"
+chatmail-admin-delete-helper = "chatmaild.admin_delete_helper:main"
 chatmail-metadata = "chatmaild.metadata:main"
 chatmail-metrics = "chatmaild.metrics:main"
 chatmail-expire = "chatmaild.expire:main"

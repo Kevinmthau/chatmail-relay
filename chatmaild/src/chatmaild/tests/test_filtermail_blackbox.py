@@ -1,6 +1,7 @@
 import smtplib
 import subprocess
 import sys
+import shutil
 
 import pytest
 
@@ -40,6 +41,9 @@ def make_popen(request):
 def test_one_mail(
     make_config, make_popen, smtpserver, maildata, filtermail_mode, monkeypatch
 ):
+    if shutil.which("filtermail") is None:
+        pytest.skip("filtermail binary not available in PATH")
+
     monkeypatch.setenv("PYTHONUNBUFFERED", "1")
     smtp_inject_port = 20025
     if filtermail_mode == "outgoing":

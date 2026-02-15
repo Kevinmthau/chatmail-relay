@@ -7,8 +7,8 @@ are created with the correct ownership.
 import json
 import sys
 
-from chatmaild.config import read_config
 from chatmaild.admin_create import create_admin_account
+from chatmaild.config import read_config
 
 CONFIG_PATH = "/usr/local/lib/chatmaild/chatmail.ini"
 MAX_BODY_LEN = 4096

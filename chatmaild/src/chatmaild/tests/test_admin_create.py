@@ -44,3 +44,12 @@ def test_create_admin_account_ignores_nocreate(monkeypatch, tmp_path, example_co
     )
     assert status_code == 201
     assert payload["status"] == "created"
+
+
+def test_create_admin_account_ignores_public_create_disabled(example_config):
+    example_config.public_create_enabled = False
+    status_code, payload = create_admin_account(
+        example_config, "abcd12345@chat.example.org", "qwertyui9"
+    )
+    assert status_code == 201
+    assert payload["status"] == "created"

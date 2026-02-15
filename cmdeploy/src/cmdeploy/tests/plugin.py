@@ -1,6 +1,7 @@
 import imaplib
 import io
 import itertools
+import json
 import os
 import random
 import smtplib
@@ -12,6 +13,30 @@ import pytest
 from chatmaild.config import read_config
 
 conftestdir = Path(__file__).parent
+REMOTE_CREATE_HELPER = "/usr/local/lib/chatmaild/venv/bin/chatmail-admin-create-helper"
+REMOTE_DELETE_HELPER = "/usr/local/lib/chatmaild/venv/bin/chatmail-admin-delete-helper"
+
+
+def _ssh_run_json(sshdomain: str, argv: list[str], payload: dict, timeout: int = 30):
+    proc = subprocess.run(
+        ["ssh", f"root@{sshdomain}", *argv],
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        check=False,
+    )
+    out = (proc.stdout or "").strip()
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"ssh rc={proc.returncode} stderr={(proc.stderr or '').strip()} stdout={out}"
+        )
+    if not out:
+        raise RuntimeError(f"empty helper output stderr={(proc.stderr or '').strip()}")
+    try:
+        return json.loads(out)
+    except Exception as e:
+        raise RuntimeError(f"invalid helper json: {out}") from e
 
 
 def pytest_addoption(parser):
@@ -237,9 +262,42 @@ def imap_or_smtp(request):
 
 
 @pytest.fixture
-def gencreds(chatmail_config):
+def gencreds(chatmail_config, sshdomain, request):
     count = itertools.count()
     next(count)
+    created: list[tuple[str, str]] = []
+
+    def _sshdomain_for(domain: str) -> str:
+        if domain == chatmail_config.mail_domain:
+            return sshdomain
+        domain2 = os.environ.get("CHATMAIL_DOMAIN2", "")
+        if domain2 and domain == domain2:
+            return os.environ.get("CHATMAIL_SSH2", domain2)
+        return domain
+
+    def _create_account(email: str, password: str, domain: str) -> None:
+        host = _sshdomain_for(domain)
+        res = _ssh_run_json(
+            host,
+            ["sudo", "-n", "-u", "vmail", REMOTE_CREATE_HELPER],
+            {"email": email, "password": password},
+            timeout=30,
+        )
+        code = int(res.get("status_code", 0) or 0)
+        if code not in (200, 201, 409):
+            raise RuntimeError(f"admin create failed: {res}")
+
+    def _delete_account(email: str, domain: str) -> None:
+        host = _sshdomain_for(domain)
+        res = _ssh_run_json(
+            host,
+            ["sudo", "-n", "-u", "vmail", REMOTE_DELETE_HELPER],
+            {"email": email},
+            timeout=60,
+        )
+        code = int(res.get("status_code", 0) or 0)
+        if code not in (200, 404):
+            raise RuntimeError(f"admin delete failed: {res}")
 
     def gen(domain=None):
         domain = domain if domain else chatmail_config.mail_domain
@@ -256,8 +314,21 @@ def gencreds(chatmail_config):
             password = "".join(
                 random.choices(alphanumeric, k=chatmail_config.password_min_length)
             )
-            yield f"{user}@{domain}", f"{password}"
+            email = f"{user}@{domain}"
+            _create_account(email, password, domain)
+            created.append((email, domain))
+            yield email, f"{password}"
 
+    def _finalize():
+        # Best-effort cleanup of accounts created during this test.
+        for email, domain in reversed(created):
+            try:
+                _delete_account(email, domain)
+            except Exception as e:
+                # Don't fail tests in teardown; print for visibility.
+                print(f"cleanup failed for {email}: {e}")
+
+    request.addfinalizer(_finalize)
     return lambda domain=None: next(gen(domain))
 
 

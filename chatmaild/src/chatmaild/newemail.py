@@ -25,6 +25,12 @@ def create_newemail_dict(config: Config):
 
 def print_new_account():
     config = read_config(CONFIG_PATH)
+    if not getattr(config, "public_create_enabled", True):
+        print("Status: 404 Not Found")
+        print("Content-Type: application/json")
+        print("")
+        print(json.dumps({"error": "public account creation is disabled"}))
+        return
     creds = create_newemail_dict(config)
 
     print("Content-Type: application/json")

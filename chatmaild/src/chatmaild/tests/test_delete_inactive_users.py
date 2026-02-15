@@ -16,6 +16,7 @@ def test_login_timestamps(example_config):
 
 
 def test_delete_inactive_users(example_config):
+    example_config.public_create_enabled = True
     new = time.time()
     old = new - (example_config.delete_inactive_users_after * 86400) - 1
     dictproxy = AuthDictProxy(example_config)

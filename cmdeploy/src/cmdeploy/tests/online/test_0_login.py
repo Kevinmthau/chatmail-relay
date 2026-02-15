@@ -1,4 +1,5 @@
 import queue
+import random
 import smtplib
 import threading
 
@@ -23,9 +24,7 @@ def test_capabilities(imap):
 
 
 def test_login_basic_functioning(imap_or_smtp, gencreds, lp):
-    """Test a) that an initial login creates a user automatically
-    and b) verify we can also login a second time with the same password
-    and c) that using a different password fails the login."""
+    """Test that a pre-created user can login, can login again, and wrong password fails."""
     user, password = gencreds()
     lp.sec(f"login first time with {user} {password}")
     imap_or_smtp.connect()
@@ -43,10 +42,18 @@ def test_login_basic_functioning(imap_or_smtp, gencreds, lp):
     with pytest.raises(imap_or_smtp.AuthError):
         imap_or_smtp.login(user, password + "wrong")
 
-    lp.sec("creating users with a short password is not allowed")
-    user, _password = gencreds()
+
+def test_login_nonexistent_user_fails(imap_or_smtp, chatmail_config):
+    """Public auto-creation is disabled: logging in with a new address should fail."""
+    alphanumeric = "abcdefghijklmnopqrstuvwxyz1234567890"
+    localpart = "".join(
+        random.choices(alphanumeric, k=chatmail_config.username_max_length)
+    )
+    user = f"zz{localpart}"[: chatmail_config.username_max_length]
+    addr = f"{user}@{chatmail_config.mail_domain}"
+    imap_or_smtp.connect()
     with pytest.raises(imap_or_smtp.AuthError):
-        imap_or_smtp.login(user, "admin")
+        imap_or_smtp.login(addr, "somepassword123")
 
 
 def test_login_same_password(imap_or_smtp, gencreds):

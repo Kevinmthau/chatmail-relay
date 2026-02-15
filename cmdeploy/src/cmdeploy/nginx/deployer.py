@@ -75,7 +75,10 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         user="root",
         group="root",
         mode="644",
-        config={"domain_name": config.mail_domain},
+        config={
+            "domain_name": config.mail_domain,
+            "public_create_enabled": bool(getattr(config, "public_create_enabled", True)),
+        },
         admin_create_enabled=admin_create_enabled,
         disable_ipv6=config.disable_ipv6,
     )
@@ -138,14 +141,34 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         mode="755",
     )
 
+    files.put(
+        name="Upload cgi admin-accounts.py script",
+        src=get_resource("admin_accounts.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-accounts.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
+    files.put(
+        name="Upload cgi admin-delete.py script",
+        src=get_resource("admin_delete.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-delete.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
     if admin_create_enabled:
         # admin-create CGI runs under fcgiwrap as www-data, but must create mailbox
         # directories and password files as vmail to match service ownership.
-        apt.packages(name="Install sudo (admin-create helper)", packages=["sudo"])
+        apt.packages(name="Install sudo (admin helpers)", packages=["sudo"])
         sudoers = files.put(
-            name="Install sudoers rule for admin-create helper",
+            name="Install sudoers rules for admin helpers",
             src=io.BytesIO(
                 b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-create-helper\n"
+                b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-accounts-helper\n"
+                b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-delete-helper\n"
             ),
             dest="/etc/sudoers.d/chatmail-admin-create",
             user="root",

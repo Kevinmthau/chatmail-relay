@@ -92,6 +92,11 @@ def main() -> None:
     </style>
   </head>
   <body>
+    <nav style="display: flex; gap: 12px; align-items: center; margin: 0 0 14px 0; font-weight: 600;">
+      <span style="display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; background: #eef3f6; color: #1e2b35;">Create</span>
+      <a href="/admin/accounts" style="color: #2a6a90; text-decoration: none;">Accounts</a>
+    </nav>
+
     <h1>Admin Account Creation</h1>
     <p class="hint">
       Creates accounts via <code>POST /admin/create</code> for <strong>{domain}</strong>.

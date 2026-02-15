@@ -8,7 +8,7 @@ import subprocess
 import sys
 from urllib.parse import parse_qs
 
-from chatmaild.config import Config, read_config
+from chatmaild.config import Config
 from chatmaild.doveauth import encrypt_password, is_allowed_to_create
 
 CONFIG_PATH = "/usr/local/lib/chatmaild/chatmail.ini"

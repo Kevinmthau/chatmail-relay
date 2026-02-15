@@ -1,3 +1,5 @@
+import io
+
 from chatmaild.config import Config
 from pyinfra import host
 from pyinfra.facts.server import Arch, Sysctl
@@ -51,7 +53,7 @@ def _install_dovecot_package(package: str, arch: str):
     arch = "amd64" if arch == "x86_64" else arch
     arch = "arm64" if arch == "aarch64" else arch
     url = f"https://download.delta.chat/dovecot/dovecot-{package}_2.3.21%2Bdfsg1-3_{arch}.deb"
-    deb_filename = "/root/" + url.split("/")[-1]
+    deb_filename = "/root/" + url.rsplit("/", 1)[-1]
 
     match (package, arch):
         case ("core", "amd64"):
@@ -142,6 +144,26 @@ def _configure_dovecot(config: Config, debug: bool = False) -> (bool, bool):
         dest="/etc/systemd/system/dovecot.service.d/10_restart.conf",
     )
     daemon_reload |= restart_conf.changed
+
+    # Block auto account creation on login when public creation is disabled.
+    # Admin creation still works (admin CGI uses ignore_nocreate=True).
+    if getattr(config, "public_create_enabled", True):
+        nocreate_removed = files.file(
+            name="Remove /etc/chatmail-nocreate when public creation is enabled",
+            path="/etc/chatmail-nocreate",
+            present=False,
+        )
+        need_restart |= nocreate_removed.changed
+    else:
+        nocreate_present = files.put(
+            name="Install /etc/chatmail-nocreate when public creation is disabled",
+            src=io.BytesIO(b""),
+            dest="/etc/chatmail-nocreate",
+            user="root",
+            group="root",
+            mode="644",
+        )
+        need_restart |= nocreate_present.changed
 
     # Validate dovecot configuration before restart
     if need_restart:

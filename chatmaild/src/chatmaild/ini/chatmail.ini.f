@@ -41,6 +41,13 @@ username_max_length = 9
 # minimum length a password must have
 password_min_length = 9
 
+# Whether to allow self-serve account creation (via /new and automatic account
+# creation on first IMAP/SMTP login).
+#
+# If set to false, only the password-protected admin endpoint can create
+# accounts.
+public_create_enabled = false
+
 # list of chatmail addresses which can send outbound un-encrypted mail
 passthrough_senders =
 
