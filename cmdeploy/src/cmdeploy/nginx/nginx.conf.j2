@@ -112,7 +112,10 @@ http {
 		location = /admin {
 			auth_basic "chatmail admin";
 			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;
-			try_files /admin.html =404;
+
+			fastcgi_pass unix:/run/fcgiwrap.socket;
+			include /etc/nginx/fastcgi_params;
+			fastcgi_param SCRIPT_FILENAME /usr/lib/cgi-bin/admin-ui.py;
 		}
 
 		location = /admin/ {

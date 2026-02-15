@@ -129,6 +129,15 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         mode="755",
     )
 
+    files.put(
+        name="Upload cgi admin-ui.py script",
+        src=get_resource("admin_ui.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-ui.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
     if admin_create_enabled:
         # admin-create CGI runs under fcgiwrap as www-data, but must create mailbox
         # directories and password files as vmail to match service ownership.
