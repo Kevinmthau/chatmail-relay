@@ -4,6 +4,7 @@
 
 import json
 import os
+import subprocess
 import sys
 from urllib.parse import parse_qs
 
@@ -12,6 +13,7 @@ from chatmaild.doveauth import encrypt_password, is_allowed_to_create
 
 CONFIG_PATH = "/usr/local/lib/chatmaild/chatmail.ini"
 MAX_BODY_LEN = 4096
+HELPER_BIN = "/usr/local/lib/chatmaild/venv/bin/chatmail-admin-create-helper"
 
 
 def create_admin_account(config: Config, email: str, password: str):
@@ -75,8 +77,36 @@ def main():
         print_response(*parse_error)
         return
 
-    config = read_config(CONFIG_PATH)
-    status_code, payload = create_admin_account(config, email=email, password=password)
+    # This CGI runs under fcgiwrap as www-data. Creating a mailbox dir must be done
+    # as vmail so permissions/ownership match the rest of the system.
+    req = json.dumps({"email": email, "password": password})
+    proc = subprocess.run(
+        ["sudo", "-n", "-u", "vmail", HELPER_BIN],
+        input=req,
+        text=True,
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        print_response(
+            500,
+            {
+                "error": "account helper failed",
+                "stderr": (proc.stderr or "").strip(),
+            },
+        )
+        return
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        print_response(500, {"error": "invalid helper response", "raw": raw})
+        return
+
+    status_code = int(payload.pop("status_code", 500))
     print_response(status_code, payload)
 
 

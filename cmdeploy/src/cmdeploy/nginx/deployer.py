@@ -130,6 +130,21 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
     )
 
     if admin_create_enabled:
+        # admin-create CGI runs under fcgiwrap as www-data, but must create mailbox
+        # directories and password files as vmail to match service ownership.
+        apt.packages(name="Install sudo (admin-create helper)", packages=["sudo"])
+        sudoers = files.put(
+            name="Install sudoers rule for admin-create helper",
+            src=io.BytesIO(
+                b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-create-helper\n"
+            ),
+            dest="/etc/sudoers.d/chatmail-admin-create",
+            user="root",
+            group="root",
+            mode="440",
+        )
+        need_restart |= sudoers.changed
+
         htpasswd_content = (
             f"{config.admin_create_user}:{config.admin_create_password_hash}\n".encode()
         )
@@ -143,6 +158,13 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         )
         need_restart |= admin_auth.changed
     else:
+        sudoers_removed = files.file(
+            name="Remove sudoers rule when admin endpoint is disabled",
+            path="/etc/sudoers.d/chatmail-admin-create",
+            present=False,
+        )
+        need_restart |= sudoers_removed.changed
+
         admin_auth_removed = files.file(
             name="Remove nginx admin auth file when admin endpoint is disabled",
             path="/etc/nginx/chatmail-admin.htpasswd",
