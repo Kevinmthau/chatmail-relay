@@ -327,7 +327,7 @@ def main() -> None:
           if (deleteSelectedButton) {{
             deleteSelectedButton.disabled = selected.size === 0;
             const n = selected.size;
-            deleteSelectedButton.textContent = n ? `Delete selected (${n})` : "Delete selected";
+            deleteSelectedButton.textContent = n ? `Delete selected (${{n}})` : "Delete selected";
           }}
         }}
 
