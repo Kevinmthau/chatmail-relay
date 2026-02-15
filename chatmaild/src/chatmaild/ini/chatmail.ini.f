@@ -33,10 +33,10 @@ delete_large_after = 7
 delete_inactive_users_after = 90
 
 # minimum length a username must have
-username_min_length = 3
+username_min_length = 2
 
 # maximum length a username can have
-username_max_length = 32
+username_max_length = 9
 
 # minimum length a password must have
 password_min_length = 9

@@ -8,6 +8,7 @@ import importlib.resources
 import importlib.util
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -388,6 +389,89 @@ def get_sshexec(ssh_host: str, verbose=True):
     return SSHExec(ssh_host, verbose=verbose)
 
 
+def _enforce_username_length_policy(inipath: Path) -> None:
+    """Ensure chatmail.ini contains the repo's username length policy.
+
+    This keeps local config and deployed server behavior aligned without
+    requiring manual edits.
+    """
+
+    desired = {
+        "username_min_length": "2",
+        "username_max_length": "9",
+    }
+
+    raw = inipath.read_bytes()
+    newline = b"\r\n" if b"\r\n" in raw else b"\n"
+    text = raw.decode("utf-8", errors="strict")
+    lines = text.splitlines(keepends=True)
+
+    in_params = False
+    changed = False
+    found = {k: False for k in desired}
+
+    def is_section_header(s: str) -> bool:
+        st = s.strip()
+        return st.startswith("[") and st.endswith("]") and len(st) >= 3
+
+    # Update keys in-place (only within [params]).
+    for i, line in enumerate(lines):
+        if is_section_header(line):
+            in_params = line.strip() == "[params]"
+            continue
+        if not in_params:
+            continue
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        for key, value in desired.items():
+            # Preserve indentation and any trailing comment.
+            m = re.match(
+                rf"^(\s*){re.escape(key)}\s*=\s*([^\r\n#]*?)(\s*#.*)?(\r?\n)?$",
+                line,
+            )
+            if not m:
+                continue
+            found[key] = True
+            if m.group(2).strip() == value:
+                break
+            comment = m.group(3) or ""
+            eol = m.group(4) or ("\r\n" if newline == b"\r\n" else "\n")
+            lines[i] = f"{m.group(1)}{key} = {value}{comment}{eol}"
+            changed = True
+            break
+
+    # Insert missing keys before the next section header (or EOF).
+    if in_params:
+        # We ended the loop while still in [params]; insert at EOF.
+        insert_at = len(lines)
+    else:
+        # Find the end of [params] section to insert into it.
+        insert_at = None
+        in_params = False
+        for i, line in enumerate(lines):
+            if is_section_header(line):
+                if in_params:
+                    insert_at = i
+                    break
+                in_params = line.strip() == "[params]"
+        if insert_at is None:
+            insert_at = len(lines) if in_params else None
+
+    if insert_at is not None:
+        for key, value in desired.items():
+            if found[key]:
+                continue
+            lines.insert(insert_at, f"{key} = {value}{newline.decode()}")
+            insert_at += 1
+            changed = True
+
+    if not changed:
+        return
+
+    inipath.write_bytes("".join(lines).encode("utf-8"))
+
+
 def main(args=None):
     """Provide main entry point for 'cmdeploy' CLI invocation."""
     parser = get_parser()
@@ -402,6 +486,7 @@ def main(args=None):
             out.red(f"expecting {args.inipath} to exist, run init first?")
             raise SystemExit(1)
         try:
+            _enforce_username_length_policy(args.inipath)
             args.config = read_config(args.inipath)
         except Exception as ex:
             out.red(ex)

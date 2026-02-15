@@ -1,6 +1,22 @@
 # AGENTS.md instructions for /Users/kevinthau/chatmail-relay
 
 <INSTRUCTIONS>
+## Repo Rules (Do Not Ask User To Manually Edit Things)
+- If the user requests a behavior/policy change, implement all required code/config/test/deploy changes in-repo. Avoid telling the user to "edit X config" or "restart Y" as a manual step.
+- If a server-side change is required and the SSH target is known/configured, apply it via SSH and record what changed in **Critical Updates** below.
+
+## Account Creation Policy (Critical)
+- Username (email localpart before `@`) length must be **2 to 9 characters**.
+  - This is enforced via `username_min_length` / `username_max_length` in the generated `chatmail.ini` defaults and by `chatmaild.doveauth.is_allowed_to_create()`.
+
+## Critical Updates (Append-Only Log)
+- 2026-02-15: Set default username length limits to **2..9** (was 3..32) by updating `chatmaild/src/chatmaild/ini/chatmail.ini.f` and adjusting related tests.
+- 2026-02-15: `cmdeploy` now enforces `username_min_length=2` and `username_max_length=9` in `chatmail.ini` automatically when running commands that load config.
+- 2026-02-15: Updated live VM `chatmail.fun` config `/usr/local/lib/chatmaild/chatmail.ini` from `username_min_length=9` to `2` (kept `username_max_length=9`) and restarted `doveauth`.
+
+## Keeping This File Updated
+- When making a critical change (security, account creation/auth, deploy behavior, config defaults, data migrations), add a dated entry to **Critical Updates** in the same PR/commit.
+
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 ### Available skills
