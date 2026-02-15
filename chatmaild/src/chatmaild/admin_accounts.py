@@ -160,6 +160,11 @@ def main() -> None:
         border-radius: 10px;
         overflow: hidden;
       }}
+      .chk {{
+        width: 16px;
+        height: 16px;
+        accent-color: #327ca8;
+      }}
       thead th {{
         text-align: left;
         font-size: 0.9rem;
@@ -235,6 +240,7 @@ def main() -> None:
           </div>
           <div class="header-controls">
             <input id="filter" type="text" placeholder="Filter (substring match)" autocomplete="off" />
+            <button id="delete-selected" class="flat-button danger" type="button" disabled>Delete selected</button>
             <button id="open-create" class="flat-button" type="button">Create new</button>
           </div>
         </div>
@@ -245,6 +251,9 @@ def main() -> None:
           <table>
             <thead>
               <tr>
+                <th style="width: 1%; white-space: nowrap;">
+                  <input id="select-all" class="chk" type="checkbox" title="Select all shown" />
+                </th>
                 <th>Email</th>
                 <th>Last login</th>
                 <th style="width: 1%; white-space: nowrap;">Actions</th>
@@ -291,6 +300,10 @@ def main() -> None:
         const loadErrorElem = document.getElementById("load-error");
         const openCreateButton = document.getElementById("open-create");
         const createCard = document.getElementById("create-card");
+        const selectAllBox = document.getElementById("select-all");
+        const deleteSelectedButton = document.getElementById("delete-selected");
+        const selected = new Set();
+        let lastShown = [];
 
         function fmtTs(ts) {{
           if (!ts) return "never";
@@ -298,16 +311,54 @@ def main() -> None:
           return d.toLocaleString();
         }}
 
+        function updateSelectionUi() {{
+          const shown = Array.isArray(lastShown) ? lastShown : [];
+          const shownCount = shown.length;
+          let selectedShown = 0;
+          for (const email of shown) {{
+            if (selected.has(email)) selectedShown += 1;
+          }}
+
+          if (selectAllBox) {{
+            selectAllBox.indeterminate = selectedShown > 0 && selectedShown < shownCount;
+            selectAllBox.checked = shownCount > 0 && selectedShown === shownCount;
+          }}
+
+          if (deleteSelectedButton) {{
+            deleteSelectedButton.disabled = selected.size === 0;
+            const n = selected.size;
+            deleteSelectedButton.textContent = n ? `Delete selected (${n})` : "Delete selected";
+          }}
+        }}
+
         function render(list, needle) {{
           const n = (needle || "").toLowerCase();
           tbody.textContent = "";
           let shown = 0;
+          const shownEmails = [];
           for (const acct of list) {{
             const email = String(acct.email || "");
             if (n && !email.toLowerCase().includes(n)) continue;
             shown += 1;
+            shownEmails.push(email);
 
             const tr = document.createElement("tr");
+
+            const tdSelect = document.createElement("td");
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.className = "chk";
+            cb.checked = selected.has(email);
+            cb.addEventListener("change", () => {{
+              if (cb.checked) {{
+                selected.add(email);
+              }} else {{
+                selected.delete(email);
+              }}
+              updateSelectionUi();
+            }});
+            tdSelect.appendChild(cb);
+            tr.appendChild(tdSelect);
 
             const tdEmail = document.createElement("td");
             tdEmail.className = "mono";
@@ -330,8 +381,10 @@ def main() -> None:
 
             tbody.appendChild(tr);
           }}
+          lastShown = shownEmails;
           const total = Array.isArray(list) ? list.length : 0;
           countElem.textContent = `${{shown}} shown / ${{total}} total`;
+          updateSelectionUi();
         }}
 
         if (loadError) {{
@@ -343,6 +396,17 @@ def main() -> None:
           render(accounts, filterInput.value);
         }});
         render(accounts, "");
+
+        if (selectAllBox) {{
+          selectAllBox.addEventListener("change", () => {{
+            const want = !!selectAllBox.checked;
+            for (const email of lastShown) {{
+              if (want) selected.add(email);
+              else selected.delete(email);
+            }}
+            render(accounts, filterInput.value);
+          }});
+        }}
 
         function showCreateCard() {{
           if (!createCard) return;
@@ -409,6 +473,20 @@ def main() -> None:
           createButton.addEventListener("click", createAccount);
         }}
 
+        async function deleteAccountRequest(email) {{
+          const response = await fetch("/admin/delete", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ email }}),
+          }});
+          const bodyText = await response.text();
+          let body = bodyText;
+          try {{
+            body = JSON.parse(bodyText);
+          }} catch (_err) {{}}
+          return {{ status: response.status, body }};
+        }}
+
         async function deleteAccount(email) {{
           if (!email) return;
           if (!confirm(`Delete ${{email}}? This removes the mailbox directory and cannot be undone.`)) {{
@@ -416,23 +494,58 @@ def main() -> None:
           }}
           result.textContent = `Deleting ${{email}}...`;
           try {{
-            const response = await fetch("/admin/delete", {{
-              method: "POST",
-              headers: {{ "Content-Type": "application/json" }},
-              body: JSON.stringify({{ email }}),
-            }});
-            const body = await response.text();
-            let parsed = body;
-            try {{
-              parsed = JSON.stringify(JSON.parse(body), null, 2);
-            }} catch (_err) {{}}
-            result.textContent = `HTTP ${{response.status}}\\n${{parsed}}`;
-            if (response.status === 200) {{
+            const res = await deleteAccountRequest(email);
+            const parsed = typeof res.body === "string" ? res.body : JSON.stringify(res.body, null, 2);
+            result.textContent = `HTTP ${{res.status}}\\n${{parsed}}`;
+            if (res.status === 200) {{
               window.location.reload();
             }}
           }} catch (err) {{
             result.textContent = `Request failed: ${{err}}`;
           }}
+        }}
+
+        async function deleteSelected() {{
+          const emails = Array.from(selected).sort();
+          if (!emails.length) return;
+
+          const preview = emails.slice(0, 20).join("\\n") + (emails.length > 20 ? `\\n... and ${{emails.length - 20}} more` : "");
+          if (!confirm(`Delete ${{emails.length}} accounts?\\n\\n${{preview}}\\n\\nThis cannot be undone.`)) {{
+            return;
+          }}
+
+          const lines = [];
+          result.textContent = `Deleting ${{emails.length}} accounts...`;
+          let ok = 0;
+          let fail = 0;
+          for (let i = 0; i < emails.length; i++) {{
+            const email = emails[i];
+            try {{
+              const res = await deleteAccountRequest(email);
+              if (res.status === 200 || res.status === 404) {{
+                ok += 1;
+                selected.delete(email);
+                lines.push(`[${{i+1}}/${{emails.length}}] OK  HTTP ${{res.status}}  ${{email}}`);
+              }} else {{
+                fail += 1;
+                lines.push(`[${{i+1}}/${{emails.length}}] ERR HTTP ${{res.status}} ${{email}}  ${{typeof res.body === "string" ? res.body : JSON.stringify(res.body)}}`);
+              }}
+            }} catch (err) {{
+              fail += 1;
+              lines.push(`[${{i+1}}/${{emails.length}}] ERR ${{email}}  ${{err}}`);
+            }}
+            result.textContent = lines.slice(-40).join("\\n");
+          }}
+
+          lines.push(`\\nSummary: ${{ok}} ok, ${{fail}} failed.`);
+          result.textContent = lines.slice(-80).join("\\n");
+          updateSelectionUi();
+          // Reload to update the accounts list, even if some deletions failed.
+          window.location.reload();
+        }}
+
+        if (deleteSelectedButton) {{
+          deleteSelectedButton.addEventListener("click", deleteSelected);
         }}
       }})();
     </script>
