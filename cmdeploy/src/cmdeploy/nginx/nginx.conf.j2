@@ -174,6 +174,32 @@ http {
 			include /etc/nginx/fastcgi_params;
 			fastcgi_param SCRIPT_FILENAME /usr/lib/cgi-bin/admin-delete.py;
 		}
+
+		location /admin/password {
+			auth_basic "chatmail admin";
+			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;
+
+			if ($request_method != POST) {
+				return 405;
+			}
+
+			fastcgi_pass unix:/run/fcgiwrap.socket;
+			include /etc/nginx/fastcgi_params;
+			fastcgi_param SCRIPT_FILENAME /usr/lib/cgi-bin/admin-password.py;
+		}
+
+		location /admin/cleartext {
+			auth_basic "chatmail admin";
+			auth_basic_user_file /etc/nginx/chatmail-admin.htpasswd;
+
+			if ($request_method != POST) {
+				return 405;
+			}
+
+			fastcgi_pass unix:/run/fcgiwrap.socket;
+			include /etc/nginx/fastcgi_params;
+			fastcgi_param SCRIPT_FILENAME /usr/lib/cgi-bin/admin-cleartext.py;
+		}
 		{% endif %}
 
                 # Proxy to iroh-relay service.

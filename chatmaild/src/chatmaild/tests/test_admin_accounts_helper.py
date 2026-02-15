@@ -13,6 +13,11 @@ def test_list_accounts_includes_created_accounts(example_config):
     assert "ab@chat.example.org" in emails
     assert "xy@chat.example.org" in emails
     assert all(isinstance(a.get("last_login"), int) for a in accounts)
+    assert all(isinstance(a.get("incoming_cleartext"), bool) for a in accounts)
+    assert all(isinstance(a.get("outgoing_cleartext"), bool) for a in accounts)
+    # New accounts default to strict mode.
+    assert all(a.get("incoming_cleartext") is False for a in accounts)
+    assert all(a.get("outgoing_cleartext") is False for a in accounts)
 
 
 def test_list_accounts_skips_entries_without_password(example_config):
@@ -22,4 +27,3 @@ def test_list_accounts_skips_entries_without_password(example_config):
     accounts = list_accounts(example_config)
     emails = [a["email"] for a in accounts]
     assert "nopw@chat.example.org" not in emails
-

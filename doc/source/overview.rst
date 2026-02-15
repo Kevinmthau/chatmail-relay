@@ -217,6 +217,13 @@ Fresh chatmail addresses have a mailbox directory that contains:
    incoming cleartext messages. If absent the address accepts incoming
    cleartext messages.
 
+-  ``allowCleartextOutgoing`` is an optional file for enabling plaintext
+   outbound mail for this address. If present, outgoing cleartext mails are
+   allowed for this sender (via ``passthrough_senders``). This is intended
+   for selected mailboxes that should interoperate with normal email. It can
+   be toggled via the admin UI (``/admin``) using the ``POST /admin/cleartext``
+   endpoint.
+
 -  ``dovecot*``, ``cur``, ``new`` and ``tmp`` represent IMAP/mailbox
    state. If the address is only used by one device, the Maildir
    directories will typically be empty unless the user of that address

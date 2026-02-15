@@ -2,7 +2,9 @@
 Description=Incoming Chatmail Postfix before queue filter 
 
 [Service]
-ExecStart={{ bin_path }} {{ config_path }} incoming
+RuntimeDirectory=chatmail-filtermail
+RuntimeDirectoryMode=0750
+ExecStart=/usr/local/lib/chatmaild/venv/bin/chatmail-filtermail-wrapper {{ bin_path }} {{ config_path }} incoming
 Restart=always
 RestartSec=30
 User=vmail

@@ -159,6 +159,24 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
         mode="755",
     )
 
+    files.put(
+        name="Upload cgi admin-password.py script",
+        src=get_resource("admin_password.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-password.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
+    files.put(
+        name="Upload cgi admin-cleartext.py script",
+        src=get_resource("admin_cleartext.py", pkg="chatmaild").open("rb"),
+        dest=f"{cgi_dir}/admin-cleartext.py",
+        user="root",
+        group="root",
+        mode="755",
+    )
+
     if admin_create_enabled:
         # admin-create CGI runs under fcgiwrap as www-data, but must create mailbox
         # directories and password files as vmail to match service ownership.
@@ -169,6 +187,9 @@ def _configure_nginx(config: Config, debug: bool = False) -> bool:
                 b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-create-helper\n"
                 b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-accounts-helper\n"
                 b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-delete-helper\n"
+                b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-password-helper\n"
+                b"www-data ALL=(vmail) NOPASSWD: /usr/local/lib/chatmaild/venv/bin/chatmail-admin-cleartext-helper\n"
+                b"www-data ALL=(root) NOPASSWD: /bin/systemctl restart filtermail.service\n"
             ),
             dest="/etc/sudoers.d/chatmail-admin-create",
             user="root",

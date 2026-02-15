@@ -14,6 +14,9 @@ from chatmaild.config import Config, read_config
 
 CONFIG_PATH = "/usr/local/lib/chatmaild/chatmail.ini"
 
+INCOMING_ENFORCE_MARKER = "enforceE2EEincoming"
+OUTGOING_ALLOW_MARKER = "allowCleartextOutgoing"
+
 
 def list_accounts(
     config: Config, *, limit: Optional[int] = None
@@ -50,7 +53,17 @@ def list_accounts(
         if st.st_size <= 0:
             continue
 
-        accounts.append({"email": addr, "last_login": int(st.st_mtime)})
+        incoming_cleartext = not entry.joinpath(INCOMING_ENFORCE_MARKER).exists()
+        outgoing_cleartext = entry.joinpath(OUTGOING_ALLOW_MARKER).exists()
+
+        accounts.append(
+            {
+                "email": addr,
+                "last_login": int(st.st_mtime),
+                "incoming_cleartext": incoming_cleartext,
+                "outgoing_cleartext": outgoing_cleartext,
+            }
+        )
         if limit is not None and len(accounts) >= limit:
             break
 

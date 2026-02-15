@@ -23,6 +23,9 @@
 - 2026-02-15: `cmdeploy` now enforces `public_create_enabled=false` in `chatmail.ini` automatically when running commands that load config (matching "admin-only creation" policy).
 - 2026-02-15: Added admin account deletion endpoint `POST /admin/delete` and wired it into the admin accounts UI (`GET /admin`) with per-account Delete buttons; deployed via `cmdeploy` with a new vmail-run helper (`chatmail-admin-delete-helper`) and sudoers rule.
 - 2026-02-15: Deployed admin-only account creation policy to live VM `chatmail.fun`: `/new` now returns 404, `public_create_enabled=false` is enforced in `/usr/local/lib/chatmaild/chatmail.ini`, and nginx now supports `POST /admin/delete` (with matching CGI + sudoers).
+- 2026-02-15: Added admin endpoint `POST /admin/password` to set/reset an account password from the admin UI (`GET /admin`), backed by a vmail-run helper (`chatmail-admin-password-helper`) and sudoers rule.
+- 2026-02-15: Added admin plaintext toggle endpoint `POST /admin/cleartext` (wired into the `/admin` accounts UI) which flips inbound/outbound cleartext mode via mailbox marker files (`enforceE2EEincoming` and new `allowCleartextOutgoing`). Filtermail services now start via a `chatmail-filtermail-wrapper` that dynamically derives `passthrough_senders` from `allowCleartextOutgoing`, and a sudoers rule allows the CGI to restart `filtermail.service` after updates.
+- 2026-02-15: Deployed `/admin/cleartext` + filtermail wrapper changes to live VM `chatmail.fun` via `cmdeploy run`, which restarted nginx and filtermail (and updated sudoers to allow restarting `filtermail.service` from the CGI endpoint).
 
 ## Keeping This File Updated
 - When making a critical change (security, account creation/auth, deploy behavior, config defaults, data migrations), add a dated entry to **Critical Updates** in the same PR/commit.

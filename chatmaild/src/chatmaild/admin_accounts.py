@@ -138,7 +138,6 @@ def main() -> None:
       .danger:hover {{ background: #8c2f2f; }}
       pre {{
         margin-top: 16px;
-        min-height: 90px;
         border-radius: 8px;
         padding: 12px;
         white-space: pre-wrap;
@@ -147,6 +146,7 @@ def main() -> None:
         font-size: 0.95rem;
         overflow-x: auto;
       }}
+      pre:empty {{ display: none; }}
       code {{
         background: #eef3f6;
         padding: 2px 6px;
@@ -182,6 +182,8 @@ def main() -> None:
       tbody tr:last-child td {{ border-bottom: none; }}
       .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }}
       .row-muted {{ color: #566b7a; }}
+      .row-actions {{ display: flex; gap: 10px; align-items: center; }}
+      .row-actions button {{ margin-top: 0; padding: 8px 10px; }}
       .split {{
         display: flex;
         justify-content: space-between;
@@ -226,7 +228,8 @@ def main() -> None:
 
     <h1>Accounts</h1>
     <p class="hint">
-      Listing mailboxes for <strong>{domain}</strong>. Create accounts via <code>POST /admin/create</code>.
+      Listing mailboxes for <strong>{domain}</strong>. Admin endpoints:
+      <code>POST /admin/create</code>, <code>POST /admin/password</code>, <code>POST /admin/cleartext</code>, <code>POST /admin/delete</code>.
     </p>
 
     <div class="grid">
@@ -256,12 +259,16 @@ def main() -> None:
                 </th>
                 <th>Email</th>
                 <th>Last login</th>
+                <th>Incoming plaintext</th>
+                <th>Outgoing plaintext</th>
                 <th style="width: 1%; white-space: nowrap;">Actions</th>
               </tr>
             </thead>
             <tbody id="accounts-body"></tbody>
           </table>
         </div>
+
+        <pre id="result"></pre>
       </div>
 
       <div class="card" id="create-card" hidden>
@@ -281,7 +288,31 @@ def main() -> None:
         <input id="password" type="text" minlength="{pw_min}" placeholder="StrongPass123!" autocomplete="off" />
 
         <button id="create-account" type="button">Create Account</button>
-        <pre id="result"></pre>
+      </div>
+
+      <div class="card" id="password-card" hidden>
+        <div class="split">
+          <div>
+            <strong>Set Password</strong>
+            <div class="hint" style="margin: 6px 0 0 0;">
+              Password min length: {pw_min}.
+            </div>
+          </div>
+        </div>
+
+        <label for="pw-email">Email</label>
+        <input id="pw-email" type="email" readonly />
+
+        <label for="pw-password">New password</label>
+        <input
+          id="pw-password"
+          type="password"
+          minlength="{pw_min}"
+          placeholder="New password"
+          autocomplete="off"
+        />
+
+        <button id="update-password" type="button">Update Password</button>
       </div>
     </div>
 
@@ -300,6 +331,10 @@ def main() -> None:
         const loadErrorElem = document.getElementById("load-error");
         const openCreateButton = document.getElementById("open-create");
         const createCard = document.getElementById("create-card");
+        const passwordCard = document.getElementById("password-card");
+        const pwEmailInput = document.getElementById("pw-email");
+        const pwPasswordInput = document.getElementById("pw-password");
+        const updatePasswordButton = document.getElementById("update-password");
         const selectAllBox = document.getElementById("select-all");
         const deleteSelectedButton = document.getElementById("delete-selected");
         const selected = new Set();
@@ -371,6 +406,30 @@ def main() -> None:
             tr.appendChild(tdLogin);
 
             const tdActions = document.createElement("td");
+            const tdIn = document.createElement("td");
+            tdIn.className = "row-muted";
+            tdIn.textContent = acct.incoming_cleartext ? "yes" : "no";
+            tr.appendChild(tdIn);
+
+            const tdOut = document.createElement("td");
+            tdOut.className = "row-muted";
+            tdOut.textContent = acct.outgoing_cleartext ? "yes" : "no";
+            tr.appendChild(tdOut);
+
+            tdActions.className = "row-actions";
+            const isPlain = !!(acct.incoming_cleartext || acct.outgoing_cleartext);
+            const ctBtn = document.createElement("button");
+            ctBtn.type = "button";
+            ctBtn.textContent = isPlain ? "Disable plaintext" : "Enable plaintext";
+            ctBtn.addEventListener("click", () => setCleartext(email, !isPlain));
+            tdActions.appendChild(ctBtn);
+
+            const pwBtn = document.createElement("button");
+            pwBtn.type = "button";
+            pwBtn.textContent = "Set password";
+            pwBtn.addEventListener("click", () => showPasswordCard(email));
+            tdActions.appendChild(pwBtn);
+
             const delBtn = document.createElement("button");
             delBtn.type = "button";
             delBtn.className = "danger";
@@ -471,6 +530,104 @@ def main() -> None:
 
         if (createButton) {{
           createButton.addEventListener("click", createAccount);
+        }}
+
+        function showPasswordCard(email) {{
+          if (!passwordCard || !pwEmailInput || !pwPasswordInput) return;
+          passwordCard.hidden = false;
+          pwEmailInput.value = email || "";
+          pwPasswordInput.value = "";
+          passwordCard.scrollIntoView({{ behavior: "smooth", block: "start" }});
+          pwPasswordInput.focus();
+        }}
+
+        async function passwordRequest(email, password) {{
+          const response = await fetch("/admin/password", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ email, password }}),
+          }});
+          const bodyText = await response.text();
+          let body = bodyText;
+          try {{
+            body = JSON.parse(bodyText);
+          }} catch (_err) {{}}
+          return {{ status: response.status, body }};
+        }}
+
+        async function updatePassword() {{
+          if (!pwEmailInput || !pwPasswordInput) return;
+          const email = (pwEmailInput.value || "").trim();
+          const password = pwPasswordInput.value || "";
+
+          if (!email || !password) {{
+            result.textContent = "Email and new password are required.";
+            return;
+          }}
+
+          if (!email.endsWith("@" + mailDomain)) {{
+            result.textContent = `Email must end with @${{mailDomain}}.`;
+            return;
+          }}
+
+          if (password.length < pwMin) {{
+            result.textContent = `Password must be at least ${{pwMin}} characters.`;
+            return;
+          }}
+
+          result.textContent = `Updating password for ${{email}}...`;
+          try {{
+            const res = await passwordRequest(email, password);
+            const parsed =
+              typeof res.body === "string" ? res.body : JSON.stringify(res.body, null, 2);
+            result.textContent = `HTTP ${{res.status}}\\n${{parsed}}`;
+            if (res.status === 200) {{
+              window.location.reload();
+            }}
+          }} catch (err) {{
+            result.textContent = `Request failed: ${{err}}`;
+          }}
+        }}
+
+        if (updatePasswordButton) {{
+          updatePasswordButton.addEventListener("click", updatePassword);
+        }}
+
+        async function setCleartextRequest(email, enabled) {{
+          const response = await fetch("/admin/cleartext", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ email, enabled }}),
+          }});
+          const bodyText = await response.text();
+          let body = bodyText;
+          try {{
+            body = JSON.parse(bodyText);
+          }} catch (_err) {{}}
+          return {{ status: response.status, body }};
+        }}
+
+        async function setCleartext(email, enabled) {{
+          if (!email) return;
+          const action = enabled ? "Enable" : "Disable";
+          const warning = enabled
+            ? "This will allow receiving and sending unencrypted (plaintext) email for this account."
+            : "This will enforce encryption for incoming mail and disallow sending unencrypted mail for this account.";
+          if (!confirm(`${{action}} plaintext mode for ${{email}}?\\n\\n${{warning}}`)) {{
+            return;
+          }}
+          result.textContent = `${{action}} plaintext mode for ${{email}}...`;
+          try {{
+            const res = await setCleartextRequest(email, enabled);
+            const parsed =
+              typeof res.body === "string" ? res.body : JSON.stringify(res.body, null, 2);
+            result.textContent = `HTTP ${{res.status}}\\n${{parsed}}`;
+            if (res.status === 200) {{
+              window.location.reload();
+            }}
+          }} catch (err) {{
+            result.textContent = `Request failed: ${{err}}`;
+          }}
         }}
 
         async function deleteAccountRequest(email) {{
