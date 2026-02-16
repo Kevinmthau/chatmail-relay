@@ -1,6 +1,13 @@
 # AGENTS.md instructions for /Users/kevinthau/chatmail-relay
 
 <INSTRUCTIONS>
+## Project Goal
+- Provide an iMessage-style chat experience where users can share their `@chatmail.fun` address and send/receive both:
+  - Regular IMAP email messages
+  - Delta Chat messages
+  in a single unified inbox.
+- Delta Chat functionality is for chat between `@chatmail.fun` addresses and supports additional features such as encryption plus delivered/read/typing indicators.
+
 ## Repo Rules (Do Not Ask User To Manually Edit Things)
 - If the user requests a behavior/policy change, implement all required code/config/test/deploy changes in-repo. Avoid telling the user to "edit X config" or "restart Y" as a manual step.
 - If a server-side change is required and the SSH target is known/configured, apply it via SSH and record what changed in **Critical Updates** below.
