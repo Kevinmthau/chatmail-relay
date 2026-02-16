@@ -32,6 +32,7 @@ from .mtail.deployer import MtailDeployer
 from .nginx.deployer import NginxDeployer
 from .opendkim.deployer import OpendkimDeployer
 from .postfix.deployer import PostfixDeployer
+from .rspamd.deployer import RspamdDeployer
 from .www import build_webpages, find_merge_conflict, get_paths
 
 
@@ -278,8 +279,6 @@ class WebsiteDeployer(Deployer):
 
 class LegacyRemoveDeployer(Deployer):
     def install(self):
-        apt.packages(name="Remove rspamd", packages="rspamd", present=False)
-
         # remove historic expunge script
         # which is now implemented through a systemd timer (chatmail-expire)
         files.file(
@@ -450,6 +449,7 @@ class ChatmailVenvDeployer(Deployer):
         self.config = config
         self.units = (
             "chatmail-metadata",
+            "chatmail-events",
             "lastlogin",
             "chatmail-expire",
             "chatmail-expire.timer",
@@ -587,11 +587,13 @@ def deploy_chatmail(config_path: Path, disable_mail: bool, website_only: bool) -
         (["master", "smtpd"], 587),
         (["imap-login", "dovecot"], 993),
         ("iroh-relay", 3340),
+        (["chatmail-events", "python3", "python"], 3350),
         ("mtail", 3903),
         ("stats", 3904),
         ("nginx", 8443),
         (["master", "smtpd"], config.postfix_reinject_port),
         (["master", "smtpd"], config.postfix_reinject_port_incoming),
+        (["rspamd_proxy", "rspamd"], 11332),
         ("filtermail", config.filtermail_smtp_port),
         ("filtermail", config.filtermail_smtp_port_incoming),
     ]
@@ -620,6 +622,7 @@ def deploy_chatmail(config_path: Path, disable_mail: bool, website_only: bool) -
         WebsiteDeployer(config),
         ChatmailVenvDeployer(config),
         MtastsDeployer(),
+        RspamdDeployer(),
         OpendkimDeployer(mail_domain),
         # Dovecot should be started before Postfix
         # because it creates authentication socket

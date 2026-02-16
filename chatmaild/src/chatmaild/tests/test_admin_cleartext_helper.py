@@ -10,8 +10,8 @@ def test_cleartext_toggle_enable_disable(example_config):
     create_admin_account(example_config, "ab@chat.example.org", "qwertyui9")
     maildir = example_config.mailboxes_dir.joinpath("ab@chat.example.org")
 
-    assert maildir.joinpath(INCOMING_ENFORCE_MARKER).exists()
-    assert not maildir.joinpath(OUTGOING_ALLOW_MARKER).exists()
+    assert not maildir.joinpath(INCOMING_ENFORCE_MARKER).exists()
+    assert maildir.joinpath(OUTGOING_ALLOW_MARKER).exists()
 
     status, body = set_cleartext_mode(
         example_config, email="ab@chat.example.org", enabled=True
@@ -44,4 +44,3 @@ def test_cleartext_toggle_rejects_wrong_domain(example_config):
     status, body = set_cleartext_mode(example_config, email="ab@elsewhere.org", enabled=True)
     assert status == 400
     assert body["error"].startswith("email must end with @")
-

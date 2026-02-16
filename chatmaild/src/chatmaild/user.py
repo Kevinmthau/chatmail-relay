@@ -14,6 +14,7 @@ class User:
         self.addr = addr
         self.password_path = password_path
         self.enforce_E2EE_path = maildir.joinpath("enforceE2EEincoming")
+        self.allow_cleartext_outgoing_path = maildir.joinpath("allowCleartextOutgoing")
         self.uid = uid
         self.gid = gid
 
@@ -43,6 +44,15 @@ class User:
         if self.enforce_E2EE_path.exists():
             self.enforce_E2EE_path.unlink()
 
+    def set_email_friendly_defaults(self):
+        """Set account defaults for broad e-mail interoperability."""
+        self.maildir.mkdir(exist_ok=True, parents=True)
+        try:
+            self.enforce_E2EE_path.unlink()
+        except FileNotFoundError:
+            pass
+        self.allow_cleartext_outgoing_path.touch()
+
     def set_password(self, enc_password):
         """Set the specified password for this user.
 
@@ -57,7 +67,6 @@ class User:
         except PermissionError:
             logging.error(f"could not write password for: {self.addr}")
             raise
-        self.enforce_E2EE_path.touch()
 
     def set_last_login_timestamp(self, timestamp):
         """Track login time with daily granularity

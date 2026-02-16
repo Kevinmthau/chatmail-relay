@@ -8,6 +8,9 @@ def test_create_admin_account_success(example_config):
     )
     assert status_code == 201
     assert payload["status"] == "created"
+    maildir = example_config.mailboxes_dir.joinpath("abcd12345@chat.example.org")
+    assert not maildir.joinpath("enforceE2EEincoming").exists()
+    assert maildir.joinpath("allowCleartextOutgoing").exists()
 
 
 def test_create_admin_account_rejects_wrong_domain(example_config):

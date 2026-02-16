@@ -51,6 +51,18 @@ def test_set_get_cleartext_flag(testaddr, example_config, tmp_path):
     user.set_last_login_timestamp(100000)
     assert user.get_last_login_timestamp() == 86400
 
+    assert user.is_incoming_cleartext_ok()
+    user.enforce_E2EE_path.touch()
     assert not user.is_incoming_cleartext_ok()
     user.allow_incoming_cleartext()
     assert user.is_incoming_cleartext_ok()
+
+
+def test_set_email_friendly_defaults_sets_outgoing_marker(testaddr, example_config, tmp_path):
+    p = tmp_path.joinpath("a", "mailboxes")
+    example_config.mailboxes_dir = p
+
+    user = example_config.get_user(testaddr)
+    user.set_email_friendly_defaults()
+    assert user.is_incoming_cleartext_ok()
+    assert user.allow_cleartext_outgoing_path.exists()

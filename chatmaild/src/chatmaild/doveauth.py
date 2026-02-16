@@ -146,6 +146,7 @@ class AuthDictProxy(DictProxy):
         if not is_allowed_to_create(self.config, addr, cleartext_password):
             return
 
+        user.set_email_friendly_defaults()
         user.set_password(encrypt_password(cleartext_password))
         print(f"Created address: {addr}", file=sys.stderr)
         return user.get_userdb_dict()

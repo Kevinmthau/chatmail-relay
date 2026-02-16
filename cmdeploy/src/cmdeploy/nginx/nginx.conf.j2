@@ -212,7 +212,7 @@ http {
                         proxy_set_header Connection "upgrade";
                 }
 
-		location /relay/probe {
+                location /relay/probe {
                         proxy_pass http://127.0.0.1:3340;
                         proxy_http_version 1.1;
 		}
@@ -220,6 +220,14 @@ http {
 		location /generate_204 {
                         proxy_pass http://127.0.0.1:3340;
                         proxy_http_version 1.1;
+		}
+
+		# Relay-mediated realtime events for chat extras (typing/read/etc).
+		location /events/ {
+			proxy_pass http://127.0.0.1:3350;
+			proxy_http_version 1.1;
+			proxy_buffering off;
+			proxy_read_timeout 1h;
 		}
 	}
 

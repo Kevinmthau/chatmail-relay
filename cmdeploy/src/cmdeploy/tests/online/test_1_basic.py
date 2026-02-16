@@ -129,7 +129,7 @@ def test_authenticated_from(cmsetup, maildata):
 
 
 @pytest.mark.parametrize("from_addr", ["fake@example.org", "fake@testrun.org"])
-def test_reject_missing_dkim(cmsetup, maildata, from_addr):
+def test_accept_missing_dkim(cmsetup, maildata, from_addr):
     domain = cmsetup.maildomain
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(10)
@@ -146,8 +146,11 @@ def test_reject_missing_dkim(cmsetup, maildata, from_addr):
     conn.starttls()
 
     with conn as s:
-        with pytest.raises(smtplib.SMTPDataError, match="No valid DKIM signature"):
-            s.sendmail(from_addr=from_addr, to_addrs=recipient.addr, msg=msg)
+        s.sendmail(from_addr=from_addr, to_addrs=recipient.addr, msg=msg)
+
+    # The message may need some time to get delivered by postfix.
+    messages = try_n_times(5, recipient.imap.fetch_all_messages)
+    assert len(messages) == 1
 
 
 def try_n_times(n, f):
@@ -161,7 +164,7 @@ def try_n_times(n, f):
 
 
 def test_rewrite_subject(cmsetup, maildata):
-    """Test that subject gets replaced with [...]."""
+    """Test that subject is preserved."""
     user1, user2 = cmsetup.gen_users(2)
 
     sent_msg = maildata(
@@ -177,9 +180,9 @@ def test_rewrite_subject(cmsetup, maildata):
     assert len(messages) == 1
     rcvd_msg = messages[0]
     assert "Subject: [...]" not in sent_msg
-    assert "Subject: [...]" in rcvd_msg
+    assert "Subject: [...]" not in rcvd_msg
     assert "Subject: Unencrypted subject" in sent_msg
-    assert "Subject: Unencrypted subject" not in rcvd_msg
+    assert "Subject: Unencrypted subject" in rcvd_msg
 
 
 @pytest.mark.slow

@@ -15,9 +15,9 @@ def test_list_accounts_includes_created_accounts(example_config):
     assert all(isinstance(a.get("last_login"), int) for a in accounts)
     assert all(isinstance(a.get("incoming_cleartext"), bool) for a in accounts)
     assert all(isinstance(a.get("outgoing_cleartext"), bool) for a in accounts)
-    # New accounts default to strict mode.
-    assert all(a.get("incoming_cleartext") is False for a in accounts)
-    assert all(a.get("outgoing_cleartext") is False for a in accounts)
+    # New accounts default to broad e-mail interoperability mode.
+    assert all(a.get("incoming_cleartext") is True for a in accounts)
+    assert all(a.get("outgoing_cleartext") is True for a in accounts)
 
 
 def test_list_accounts_skips_entries_without_password(example_config):

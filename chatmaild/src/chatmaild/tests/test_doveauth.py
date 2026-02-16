@@ -120,6 +120,7 @@ def test_handle_dovecot_protocol_user_not_exists(example_config):
 
 
 def test_handle_dovecot_protocol_iterate(gencreds, example_config):
+    example_config.public_create_enabled = True
     dictproxy = AuthDictProxy(config=example_config)
     dictproxy.lookup_passdb("asdf00000@chat.example.org", "q9mr3faue")
     dictproxy.lookup_passdb("asdf11111@chat.example.org", "q9mr3faue")

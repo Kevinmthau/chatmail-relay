@@ -37,6 +37,7 @@ def create_admin_account(config: Config, email: str, password: str):
     if not is_allowed_to_create(config, email, password, ignore_nocreate=True):
         return 400, {"error": "account creation policy check failed"}
 
+    user.set_email_friendly_defaults()
     user.set_password(encrypt_password(password))
     return 201, {"status": "created", "email": email}
 

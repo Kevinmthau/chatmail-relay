@@ -43,9 +43,8 @@ The deployed system components of a chatmail relay are:
    stores messages for users until they download them
 
 -  `filtermail <https://github.com/chatmail/filtermail>`_
-   prevents unencrypted email from leaving or entering the chatmail
-   service and is integrated into Postfix’s outbound and inbound mail
-   pipelines.
+   enforces configured cleartext policy and is integrated into
+   Postfix’s outbound and inbound mail pipelines.
 
 -  Nginx_ shows the web page with privacy policy and additional information
 
@@ -53,7 +52,10 @@ The deployed system components of a chatmail relay are:
    certificates for Dovecot, Postfix, and Nginx
 
 -  `OpenDKIM <http://www.opendkim.org/>`_ for signing messages with
-   DKIM and rejecting inbound messages without DKIM
+   DKIM on outgoing messages and DKIM processing for inbound messages
+
+-  `Rspamd <https://rspamd.com/>`_ for spam and abuse scoring through
+   local Postfix milter integration
 
 -  `mtail <https://google.github.io/mtail/>`_ for collecting anonymized
    metrics in case you have monitoring
@@ -79,8 +81,8 @@ other minor things. chatmaild can also be installed as a stand-alone
 Python package.
 
 ``chatmaild`` implements various systemd-controlled services
-that integrate with Dovecot and Postfix to achieve instant-onboarding
-and only relaying OpenPGP end-to-end messages encrypted messages. A
+that integrate with Dovecot and Postfix to achieve instant-onboarding,
+relay metadata/push functionality, and mail/chat policy handling. A
 short overview of ``chatmaild`` services:
 
 -  `doveauth <https://github.com/chatmail/relay/blob/main/chatmaild/src/chatmaild/doveauth.py>`_
@@ -100,6 +102,11 @@ short overview of ``chatmaild`` services:
    `notifications.delta.chat <https://delta.chat/en/help#instant-delivery>`_
    so the push notifications on the user’s phone can be triggered by
    Apple/Google/Huawei.
+
+-  `chatmail-events <https://github.com/chatmail/relay/blob/main/chatmaild/src/chatmaild/events.py>`_
+   provides a relay-mediated realtime event channel (SSE stream +
+   authenticated event submission) for chat extras such as typing
+   indicators between local relay accounts.
 
 -  `chatmail-expire <https://github.com/chatmail/relay/blob/main/chatmaild/src/chatmaild/expire.py>`_
    deletes users if they have not logged in for a longer while.
@@ -212,17 +219,17 @@ Fresh chatmail addresses have a mailbox directory that contains:
    messages. If you modify the password file manually, you effectively
    block the user.
 
--  ``enforceE2EEincoming`` is a default-created file with each address.
+-  ``enforceE2EEincoming`` is an optional file.
    If present the file indicates that this chatmail address rejects
    incoming cleartext messages. If absent the address accepts incoming
    cleartext messages.
 
--  ``allowCleartextOutgoing`` is an optional file for enabling plaintext
-   outbound mail for this address. If present, outgoing cleartext mails are
-   allowed for this sender (via ``passthrough_senders``). This is intended
-   for selected mailboxes that should interoperate with normal email. It can
-   be toggled via the admin UI (``/admin``) using the ``POST /admin/cleartext``
-   endpoint.
+-  ``allowCleartextOutgoing`` allows plaintext outbound mail for this
+   address. If present, outgoing cleartext mails are allowed for this
+   sender (via ``passthrough_senders``). New accounts are created in
+   interoperable mode (incoming and outgoing cleartext enabled by default),
+   and this can be toggled via the admin UI (``/admin``) using the
+   ``POST /admin/cleartext`` endpoint.
 
 -  ``dovecot*``, ``cur``, ``new`` and ``tmp`` represent IMAP/mailbox
    state. If the address is only used by one device, the Maildir
@@ -288,7 +295,7 @@ Note that chatmail relays
 
 - do **not** rely on legacy authentication mechanisms such as
   :rfc:`iprev <8601#section-2.7.3>` and :rfc:`SPF <7208>`.
-  Any IP address is accepted if the DKIM signature was valid.
+  Any IP address may be accepted if message policy checks pass.
 
 Outgoing emails must be sent over authenticated connection with envelope
 ``MAIL FROM`` (return path) corresponding to the login.
